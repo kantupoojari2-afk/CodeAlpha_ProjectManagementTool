@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow - Project Management Tool</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===== Auth screen ===== -->
+  <section id="auth-view" class="hidden">
+    <div class="auth-card">
+      <h1>TaskFlow</h1>
+      <p class="muted">Plan projects, manage task boards and collaborate in real time.</p>
+      <div class="tabs">
+        <button id="tab-login" class="tab active" type="button">Log in</button>
+        <button id="tab-register" class="tab" type="button">Register</button>
+      </div>
+      <form id="auth-form" class="stack">
+        <input id="name" placeholder="Full name" class="hidden">
+        <input id="email" type="email" placeholder="Email" required>
+        <input id="password" type="password" placeholder="Password (min 6 chars)" required minlength="6">
+        <button id="auth-submit" class="btn primary full" type="submit">Log in</button>
+        <p id="auth-error" class="error"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===== Main app ===== -->
+  <section id="app-view" class="hidden">
+    <header class="topbar">
+      <div class="brand">TaskFlow</div>
+      <div class="top-actions">
+        <div class="bell-wrap">
+          <button id="bell" class="btn ghost" type="button">
+            🔔 <span id="notif-count" class="badge hidden">0</span>
+          </button>
+          <div id="notif-panel" class="panel hidden">
+            <div class="panel-head">
+              <strong>Notifications</strong>
+              <button id="read-all" class="link" type="button">Mark all read</button>
+            </div>
+            <ul id="notif-list" class="notif-list"></ul>
+          </div>
+        </div>
+        <span id="me-name" class="muted"></span>
+        <button id="logout" class="btn ghost" type="button">Log out</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Projects list -->
+      <div id="projects-view">
+        <div class="row between wrap">
+          <h2>Your projects</h2>
+          <button id="new-project-btn" class="btn primary" type="button">+ New project</button>
+        </div>
+        <div id="project-list" class="grid"></div>
+      </div>
+
+      <!-- Project board -->
+      <div id="board-view" class="hidden">
+        <button id="back-btn" class="link" type="button">← All projects</button>
+        <div class="row between wrap board-head">
+          <div>
+            <h2 id="board-title"></h2>
+            <p id="board-desc" class="muted"></p>
+            <p id="board-members" class="small muted"></p>
+          </div>
+          <div class="row gap wrap">
+            <button id="add-member-btn" class="btn ghost" type="button">+ Add member</button>
+            <button id="new-task-btn" class="btn primary" type="button">+ New task</button>
+          </div>
+        </div>
+
+        <div class="board">
+          <div class="column" data-status="todo">
+            <h3>To Do <span class="count">0</span></h3>
+            <div class="cards"></div>
+          </div>
+          <div class="column" data-status="in_progress">
+            <h3>In Progress <span class="count">0</span></h3>
+            <div class="cards"></div>
+          </div>
+          <div class="column" data-status="done">
+            <h3>Done <span class="count">0</span></h3>
+            <div class="cards"></div>
+          </div>
+        </div>
+        <p class="small muted">Tip: drag a card between columns to change its status.</p>
+      </div>
+    </main>
+  </section>
+
+  <!-- ===== Task modal (create / edit + comments) ===== -->
+  <div id="task-modal" class="modal hidden">
+    <div class="modal-card wide">
+      <h3 id="task-modal-title">New task</h3>
+      <form id="task-form" class="stack">
+        <input name="title" placeholder="Task title" required>
+        <textarea name="description" placeholder="Description" rows="3"></textarea>
+        <div class="row gap wrap">
+          <label class="field">Status
+            <select name="status">
+              <option value="todo">To Do</option>
+              <option value="in_progress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+          </label>
+          <label class="field">Priority
+            <select name="priority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+          <label class="field grow">Assignee
+            <select name="assignee_id"></select>
+          </label>
+        </div>
+        <p id="task-error" class="error"></p>
+        <div class="row between wrap">
+          <button id="task-delete" class="btn danger hidden" type="button">Delete task</button>
+          <div class="row gap">
+            <button class="btn ghost" type="button" data-close>Cancel</button>
+            <button class="btn primary" type="submit">Save</button>
+          </div>
+        </div>
+      </form>
+
+      <div id="comments-section" class="hidden">
+        <h4>Comments</h4>
+        <ul id="comment-list" class="comment-list"></ul>
+        <form id="comment-form" class="row gap">
+          <input name="body" placeholder="Write a comment..." required>
+          <button class="btn primary" type="submit">Post</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Project modal ===== -->
+  <div id="project-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3>New project</h3>
+      <form id="project-form" class="stack">
+        <input name="name" placeholder="Project name" required>
+        <textarea name="description" placeholder="What is this project about?" rows="2"></textarea>
+        <p id="project-error" class="error"></p>
+        <div class="row between">
+          <button class="btn ghost" type="button" data-close>Cancel</button>
+          <button class="btn primary" type="submit">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== Member modal ===== -->
+  <div id="member-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3>Add a member</h3>
+      <p class="muted small">Enter the email of a registered TaskFlow user.</p>
+      <form id="member-form" class="stack">
+        <input name="email" type="email" placeholder="teammate@example.com" required>
+        <p id="member-error" class="error"></p>
+        <div class="row between">
+          <button class="btn ghost" type="button" data-close>Cancel</button>
+          <button class="btn primary" type="submit">Add</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
