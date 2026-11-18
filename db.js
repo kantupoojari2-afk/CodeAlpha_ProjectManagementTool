@@ -1,9 +1,26 @@
-const Database = require('better-sqlite3');
+const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
 
-const db = new Database(path.join(__dirname, 'data.db'));
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+const raw = new DatabaseSync(path.join(__dirname, 'data.db'));
+raw.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
+
+// Small wrapper so server.js can keep using the same calls as better-sqlite3
+const db = {
+  exec: (sql) => raw.exec(sql),
+  prepare: (sql) => raw.prepare(sql),
+  pragma: (p) => raw.exec(`PRAGMA ${p}`),
+  transaction: (fn) => (...args) => {
+    raw.exec('BEGIN');
+    try {
+      const result = fn(...args);
+      raw.exec('COMMIT');
+      return result;
+    } catch (err) {
+      raw.exec('ROLLBACK');
+      throw err;
+    }
+  },
+};
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -13,7 +30,6 @@ db.exec(`
     password    TEXT NOT NULL,
     created_at  TEXT DEFAULT CURRENT_TIMESTAMP
   );
-
   CREATE TABLE IF NOT EXISTS projects (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     name        TEXT NOT NULL,
@@ -21,14 +37,12 @@ db.exec(`
     owner_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at  TEXT DEFAULT CURRENT_TIMESTAMP
   );
-
   CREATE TABLE IF NOT EXISTS project_members (
     project_id  INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role        TEXT NOT NULL DEFAULT 'member',
     PRIMARY KEY (project_id, user_id)
   );
-
   CREATE TABLE IF NOT EXISTS tasks (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id  INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -42,7 +56,6 @@ db.exec(`
     created_at  TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at  TEXT DEFAULT CURRENT_TIMESTAMP
   );
-
   CREATE TABLE IF NOT EXISTS comments (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     task_id     INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
@@ -50,7 +63,6 @@ db.exec(`
     body        TEXT NOT NULL,
     created_at  TEXT DEFAULT CURRENT_TIMESTAMP
   );
-
   CREATE TABLE IF NOT EXISTS notifications (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id          INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
